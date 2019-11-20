@@ -23,7 +23,7 @@ function StdoutLogHandler:log(conf)
   message['service'] = nil
   message['route'] = nil
   message['route'] = nil
-  -- Let's only log headers that are safe, e.g. in particular 'authorization'
+  -- Let's only log headers that are safe, e.g. in particular NOT 'authorization'
   if message['request'] ~= nil then
     headers['user-agent'] = message['request']['headers']['user-agent']
     headers['accept'] = message['request']['headers']['accept']
