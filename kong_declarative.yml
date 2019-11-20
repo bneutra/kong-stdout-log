@@ -1,0 +1,19 @@
+_format_version: "1.1"
+# simple kong db-less config for testing
+services:
+- name: health
+  url: http://localhost
+  routes:
+  - name: health-route
+    paths:
+    - /health
+
+plugins:
+- name: request-termination
+  service: health
+  config: 
+    status_code: 200
+    message: OK
+
+- name: stdout-log
+  service: health
