@@ -1,12 +1,50 @@
+local typedefs = require "kong.db.schema.typedefs"
+
 -- TODO: could we have a config to enumerate fields we want to log?
 -- https://docs.konghq.com/1.3.x/plugin-development/plugin-configuration/
 return {
-    no_consumer = true, -- this plugin will only be API-wide,
+    name = "stdout-log",
     fields = {
-        -- Describe your plugin's configuration's schema here.
+        { consumer = typedefs.no_consumer, },
+        { config = {
+            type = "record",
+            fields = {
+                { allowed_fields = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+                { allowed_request_fields = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+                { allowed_response_fields = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+                { allowed_latencies_fields = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+                { allowed_request_headers = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+                { allowed_response_headers = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+                { allowed_request_querystring_fields = {
+                    type = "array",
+                    default = { },
+                    elements = { type = "string" },
+                }, },
+            }, },
+        },
     },
-    self_check = function(schema, plugin_t, dao, is_updating)
-        -- perform any custom verification
-         return true
-    end
 }

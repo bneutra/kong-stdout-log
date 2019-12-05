@@ -11,9 +11,37 @@ services:
 plugins:
 - name: request-termination
   service: health
-  config: 
+  config:
     status_code: 200
     message: OK
 
 - name: stdout-log
   service: health
+  config:
+    allowed_fields:
+    - request
+    - response
+    - latencies
+    - authenticated_entity
+    - client_ip
+    - consumer
+    - started_at
+    - tries
+    - upstream_uri
+    allowed_request_fields:
+    - uri
+    - url
+    - method
+    - headers
+    - size
+    - tls
+    allowed_request_headers:
+    - user-agent
+    - accept
+    allowed_response_fields:
+    - size
+    - status
+    allowed_latencies_fields:
+    - kong
+    - proxy
+    - request
