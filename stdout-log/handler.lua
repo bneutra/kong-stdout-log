@@ -12,85 +12,55 @@ function StdoutLogHandler:new()
   StdoutLogHandler.super.new(self, "stdout-log")
 end
 
-function filterSerializedFields(serialized, conf)
-  local filtered_fields = {}
+-- Returns a copy of the input table filtered to only those keys present
+-- in allowed_keys. The corresponding values will either be:
+--     * the same as in the input
+--     * the result of calling the function value from special_cases
+--       corresponding to the same key (letting us do further filtering
+--       of nested tables)
+function filterTable(table, allowed_keys, special_cases)
+  local filteredTable = {}
 
-  for field, value in pairs(serialized) do
-    for _, allowed_field in pairs(conf.allowed_fields) do
-      if field == allowed_field then
-        if field == "request" then
-          filtered_fields["request"] = {}
-          for request_field, request_value in pairs(value) do
-            for _, allowed_request_field in pairs(conf.allowed_request_fields) do
-              if allowed_request_field == request_field then
-                if request_field == "headers" then
-                  filtered_fields["request"]["headers"] = {}
-                  for header, header_value in pairs(request_value) do
-                    for _, allowed_header in pairs(conf.allowed_request_headers) do
-                      if header == allowed_header then
-                        filtered_fields[field][request_field][header] = header_value
-                      end
-                    end
-                  end
-                elseif request_field == "querystring" then
-                  filtered_fields["request"]["querystring"] = {}
-                  for querystring_field, querystring_value in pairs(request_value) do
-                    for _, allowed_querystring_field in pairs(conf.allowed_request_querystring_fields) do
-                      if querystring_field == allowed_querystring_field then
-                        filtered_fields[field][request_field][querystring_field] = querystring_value
-                      end
-                    end
-                  end
-                else
-                  filtered_fields["request"][request_field] = request_value
-                end
-              end
-            end
-          end
+  for key, value in pairs(table) do
+    for _, allowed_key in pairs(allowed_keys) do
+      if key == allowed_key then
+        local special_cased = false
 
-        elseif field == "response" then
-          filtered_fields["response"] = {}
-          for response_field, response_value in pairs(value) do
-            for _, allowed_response_field in pairs(conf.allowed_response_fields) do
-              if allowed_response_field == response_field then
-                if response_field == "headers" then
-                  filtered_fields["response"]["headers"] = {}
-                  for header, header_value in pairs(response_value) do
-                    for _, allowed_header in pairs(conf.allowed_response_headers) do
-                      if header == allowed_header then
-                        filtered_fields[field][response_field][header] = header_value
-                      end
-                    end
-                  end
-                else
-                  filtered_fields["response"][response_field] = response_value
-                end
-              end
-            end
+        for special_case_key, special_case_handler in pairs(special_cases) do
+          if key == special_case_key then
+            filteredTable[key] = special_case_handler(value)
+            special_cased = true
+            break
           end
-        elseif field == "latencies" then
-          filtered_fields["latencies"] = {}
-          for latencies_field, latencies_value in pairs(value) do
-            for _, allowed_latencies_field in pairs(conf.allowed_latencies_fields) do
-              if allowed_latencies_field == latencies_field then
-                filtered_fields["latencies"][latencies_field] = latencies_value
-              end
-            end
-          end
-        else
-          filtered_fields[field] = value
         end
+
+        if not special_cased then
+          filteredTable[key] = value
+        end
+        break
       end
     end
   end
 
-  return filtered_fields
+  return filteredTable
+end
+
+function filterSerializedFields(serialized, conf)
+  return filterTable(serialized, conf.allowed_fields, {
+    request=function(x) return filterTable(x, conf.allowed_request_fields, {
+      headers=function(y) return filterTable(y, conf.allowed_request_headers, {}) end,
+      querystring=function(y) return filterTable(y, conf.allowed_request_querystring_fields, {}) end,
+    }) end,
+    response=function(x) return filterTable(x, conf.allowed_response_fields, {
+      headers=function(y) return filterTable(y, conf.allowed_response_headers, {}) end,
+    }) end,
+    latencies=function(x) return filterTable(x, conf.allowed_latencies_fields, {}) end,
+  })
 end
 
 function StdoutLogHandler:log(conf)
   StdoutLogHandler.super.log(self)
   local message = filterSerializedFields(basic_serializer.serialize(ngx), conf)
-
   io.stdout:write(cjson.encode(message) .. "\n")
 end
 
